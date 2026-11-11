@@ -1,23 +1,55 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DAYS, buildDaySlots, COURSE_COLORS, ALL_PERIODS } from '../data/timetableData';
-import { Clock, MapPin, User, Plus } from 'lucide-react';
+import { Clock, MapPin, User, Plus, GripVertical, CheckCircle2, Circle } from 'lucide-react';
 
 export default function MobileAgendaView({ 
   onCourseClick, 
   onEmptyCellClick,
+  onMoveSession,
+  onToggleComplete,
+  completedIds = [],
   selectedCourseCode,
   classes = [],
   activePeriods = ALL_PERIODS
 }) {
+  const [dragOverDay, setDragOverDay] = useState(null);
+
   return (
     <div className="agenda-container">
+      <div className="drag-hint-banner print-hide">
+        <GripVertical size={14} className="hint-icon" />
+        <span><strong>Interactive Agenda:</strong> Tap the check circle to mark sessions completed. Drag to another day card to reschedule.</span>
+      </div>
+
       <div className="agenda-list">
         {DAYS.map(dayObj => {
           const slots = buildDaySlots(dayObj.key, classes, activePeriods);
           const activeSlots = slots.filter(s => !s.isEmpty);
+          const isDropTarget = dragOverDay === dayObj.key;
 
           return (
-            <div key={dayObj.key} className="agenda-day-card">
+            <div 
+              key={dayObj.key} 
+              className={`agenda-day-card ${isDropTarget ? 'agenda-day-drag-over' : ''}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (dragOverDay !== dayObj.key) setDragOverDay(dayObj.key);
+              }}
+              onDragLeave={() => {
+                if (dragOverDay === dayObj.key) setDragOverDay(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverDay(null);
+                const sessionId = e.dataTransfer.getData('text/plain');
+                if (sessionId && onMoveSession) {
+                  const draggedItem = classes.find(c => c.id === sessionId);
+                  const targetStart = draggedItem ? draggedItem.startPeriod : 1;
+                  onMoveSession(sessionId, dayObj.label, targetStart);
+                }
+              }}
+            >
               <div className="agenda-day-header">
                 <div className="day-name-badge">
                   <span className="badge-short">{dayObj.short}</span>
@@ -58,30 +90,57 @@ export default function MobileAgendaView({
                       text: '#111827'
                     };
                     const isSelected = selectedCourseCode === slot.code;
+                    const isCompleted = completedIds.includes(slot.id);
 
                     return (
                       <div 
                         key={idx}
-                        className={`agenda-session-card ${isSelected ? 'session-selected' : ''}`}
+                        draggable={true}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', slot.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        className={`agenda-session-card ${isSelected ? 'session-selected' : ''} ${isCompleted ? 'agenda-card-completed' : ''}`}
                         style={{ 
-                          borderLeft: `5px solid ${colors.border}`,
+                          borderLeft: `5px solid ${isCompleted ? '#16a34a' : colors.border}`,
                           backgroundColor: '#ffffff'
                         }}
                         onClick={() => onCourseClick({ ...slot, day: dayObj.label })}
                       >
                         <div className="session-top">
-                          <span 
-                            className="session-code-tag" 
-                            style={{ backgroundColor: colors.bg, color: colors.text }}
-                          >
-                            {slot.code}
-                          </span>
+                          <div className="session-code-group">
+                            <button
+                              type="button"
+                              className={`agenda-check-circle ${isCompleted ? 'checked' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleComplete && onToggleComplete(slot.id);
+                              }}
+                              title={isCompleted ? "Completed! Click to unmark" : "Mark as completed"}
+                            >
+                              {isCompleted ? (
+                                <CheckCircle2 size={16} className="text-green" />
+                              ) : (
+                                <Circle size={16} className="text-muted" />
+                              )}
+                            </button>
+                            <span 
+                              className="session-code-tag" 
+                              style={{ backgroundColor: colors.bg, color: colors.text }}
+                            >
+                              {slot.code}
+                            </span>
+                            {isCompleted && <span className="agenda-done-tag">✓ Done</span>}
+                          </div>
                           <span className="session-time">
                             <Clock size={14} /> {slot.time}
+                            <GripVertical size={13} className="agenda-grip print-hide" />
                           </span>
                         </div>
 
-                        <h4 className="session-title">{slot.title}</h4>
+                        <h4 className={`session-title ${isCompleted ? 'title-done' : ''}`}>
+                          {slot.title}
+                        </h4>
 
                         <div className="session-meta-row">
                           {slot.room && (

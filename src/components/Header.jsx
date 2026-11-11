@@ -7,7 +7,9 @@ import {
   Clock, 
   SlidersHorizontal,
   PlusCircle,
-  Moon
+  Moon,
+  Sparkles,
+  Layers
 } from 'lucide-react';
 import { exportTimetableToICS } from '../utils/icsExport';
 
@@ -20,6 +22,8 @@ export default function Header({
   setViewMode,
   periodRange,
   setPeriodRange,
+  schedulePreset,
+  setSchedulePreset,
   onOpenAddModal
 }) {
   return (
@@ -28,10 +32,10 @@ export default function Header({
         <div className="brand-title-group">
           <div className="badge-pill">
             <span className="live-dot"></span>
-            Academic Year 2026/2027 • Extended Schedule
+            Academic Year 2026/2027 • Strategic Study &amp; Review Schedule
           </div>
           <h1 className="main-title">B.Sc. Computer Science-4 (Group 2)</h1>
-          <p className="sub-title">Schedule &amp; Curriculum • Year 4 Semester One</p>
+          <p className="sub-title">Schedule &amp; Curriculum • Strategic Course Reviews &amp; CCNA</p>
         </div>
 
         <div className="header-actions">
@@ -39,7 +43,7 @@ export default function Header({
             type="button"
             className="action-btn success-btn print-hide"
             onClick={onOpenAddModal}
-            title="Add a custom lecture, lab or evening study session"
+            title="Add a custom lecture, lab or personal study session"
           >
             <PlusCircle size={16} />
             <span>Add Session</span>
@@ -72,7 +76,7 @@ export default function Header({
           <Search size={18} className="search-icon" />
           <input 
             type="text" 
-            placeholder="Search course, lecturer, code or room (e.g. CSM 481, Parley, SCBSF20)..." 
+            placeholder="Search course, review, CCNA, lecturer, or room (e.g. CSM 481 Rev, CCNA, Parley)..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -117,15 +121,29 @@ export default function Header({
           </div>
 
           <div className="period-span-select-wrapper">
-            <span className="span-label"><Moon size={14} /> Schedule Hours:</span>
+            <span className="span-label"><Layers size={14} /> Plan:</span>
+            <select 
+              value={schedulePreset} 
+              onChange={(e) => setSchedulePreset(e.target.value)}
+              className="period-select"
+              title="Filter by plan entries"
+            >
+              <option value="all">Full Plan (Lectures + Reviews + CCNA)</option>
+              <option value="classes-only">Official Lectures Only</option>
+              <option value="study-only">Personal Reviews &amp; CCNA Only</option>
+            </select>
+          </div>
+
+          <div className="period-span-select-wrapper">
+            <span className="span-label"><Moon size={14} /> Hours:</span>
             <select 
               value={periodRange} 
               onChange={(e) => setPeriodRange(e.target.value)}
               className="period-select"
               title="Change schedule period span"
             >
-              <option value="until-11pm">Until 11:00 PM (15 Periods: 8am - 11:50pm)</option>
-              <option value="until-10:50pm">Until 10:50 PM (14 Periods: 8am - 10:50pm)</option>
+              <option value="until-11pm">Until 11:00 PM (15 Periods)</option>
+              <option value="until-10:50pm">Until 10:50 PM (14 Periods)</option>
               <option value="standard">Original (10 Periods: 8am - 6:50pm)</option>
             </select>
           </div>

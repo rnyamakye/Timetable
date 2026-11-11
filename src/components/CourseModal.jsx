@@ -1,11 +1,34 @@
 import React from 'react';
-import { X, Calendar, Clock, MapPin, User, Layers, Check, Trash2, BookOpen } from 'lucide-react';
+import { 
+  X, 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  User, 
+  Layers, 
+  Check, 
+  Trash2, 
+  BookOpen, 
+  Award, 
+  Pencil,
+  CheckCircle2,
+  Circle
+} from 'lucide-react';
 import { COURSE_COLORS, CURRICULUM_COURSES } from '../data/timetableData';
 
-export default function CourseModal({ course, onClose, onSelectCourse, onDeleteSession }) {
+export default function CourseModal({ 
+  course, 
+  onClose, 
+  onSelectCourse, 
+  onDeleteSession,
+  onEditSession,
+  isCompleted = false,
+  onToggleComplete
+}) {
   if (!course) return null;
 
   const isStudy = course.sessionType === 'study';
+  const isCertification = course.isCertification || course.code === 'CCNA';
 
   const colors = COURSE_COLORS[course.colorKey] || {
     bg: '#f3f4f6',
@@ -23,7 +46,7 @@ export default function CourseModal({ course, onClose, onSelectCourse, onDeleteS
       <div 
         className="modal-content" 
         onClick={(e) => e.stopPropagation()}
-        style={{ borderTop: `6px solid ${colors.border}` }}
+        style={{ borderTop: `6px solid ${isCompleted ? '#16a34a' : colors.border}` }}
       >
         <button 
           type="button" 
@@ -39,16 +62,47 @@ export default function CourseModal({ course, onClose, onSelectCourse, onDeleteS
             <span className="course-code-badge" style={{ backgroundColor: colors.bg, color: colors.text, borderColor: colors.border }}>
               {course.code}
             </span>
-            {isStudy ? (
+            {isCertification ? (
+              <span className="certification-badge">
+                <Award size={12} /> Cisco Certification
+              </span>
+            ) : isStudy ? (
               <span className="study-type-badge">
                 <BookOpen size={12} /> Personal Study
               </span>
             ) : (
               course.group && <span className="group-badge">{course.group}</span>
             )}
+            {isCompleted && (
+              <span className="modal-completed-pill">
+                <CheckCircle2 size={12} /> Completed
+              </span>
+            )}
             {course.isCustom && <span className="custom-badge">Custom</span>}
           </div>
           <h2 className="modal-title">{course.title}</h2>
+          {course.description && (
+            <p className="modal-desc-text">{course.description}</p>
+          )}
+
+          {/* Quick Habit Completion Toggle Bar */}
+          <button
+            type="button"
+            className={`modal-habit-toggle-btn ${isCompleted ? 'completed-state' : ''}`}
+            onClick={() => onToggleComplete && onToggleComplete(course.id)}
+          >
+            {isCompleted ? (
+              <>
+                <CheckCircle2 size={18} className="habit-check-icon text-green" />
+                <span>Marked as Done &amp; Attended ✓</span>
+              </>
+            ) : (
+              <>
+                <Circle size={18} className="habit-check-icon text-muted" />
+                <span>Mark as Completed / Attended</span>
+              </>
+            )}
+          </button>
         </div>
 
         <div className="modal-body-grid">
@@ -72,10 +126,18 @@ export default function CourseModal({ course, onClose, onSelectCourse, onDeleteS
 
           {isStudy ? (
             <div className="detail-item span-2">
-              <BookOpen size={18} className="detail-icon text-amber" />
+              {isCertification ? (
+                <Award size={18} className="detail-icon text-blue" />
+              ) : (
+                <BookOpen size={18} className="detail-icon text-amber" />
+              )}
               <div>
-                <span className="detail-label">Activity Type</span>
-                <span className="detail-value">Personal Study &amp; Self-Directed Revision</span>
+                <span className="detail-label">Session Classification</span>
+                <span className="detail-value">
+                  {isCertification 
+                    ? 'Extracurricular Professional Certification (Not in Semester Curriculum)' 
+                    : 'Strategic Course Review & Active Consolidation'}
+                </span>
               </div>
             </div>
           ) : (
@@ -106,7 +168,7 @@ export default function CourseModal({ course, onClose, onSelectCourse, onDeleteS
         {curriculumMatch && (
           <div className="curriculum-breakdown-card">
             <h4 className="curriculum-card-title">
-              <Layers size={16} /> Curriculum Weighting
+              <Layers size={16} /> Course Syllabus Weighting ({curriculumMatch.code})
             </h4>
             <div className="curriculum-metric-row">
               <div className="metric-box">
@@ -126,29 +188,44 @@ export default function CourseModal({ course, onClose, onSelectCourse, onDeleteS
         )}
 
         <div className="modal-footer-space-between">
-          {course.isCustom ? (
+          <div className="modal-left-actions">
             <button
               type="button"
-              className="danger-btn"
+              className="action-btn danger-btn"
               onClick={() => {
-                if (onDeleteSession) onDeleteSession(course.id);
+                if (window.confirm(`Are you sure you want to remove "${course.code} - ${course.title}" from the timetable?`)) {
+                  onDeleteSession(course.id);
+                  onClose();
+                }
+              }}
+              title="Remove this session from the timetable"
+            >
+              <Trash2 size={15} /> Remove
+            </button>
+
+            <button
+              type="button"
+              className="action-btn edit-btn"
+              onClick={() => {
+                onEditSession(course);
                 onClose();
               }}
+              title="Edit course code, title, periods, room, or color"
             >
-              <Trash2 size={16} /> Remove Session
+              <Pencil size={15} /> Edit
             </button>
-          ) : <div></div>}
+          </div>
 
           <button 
             type="button" 
-            className="highlight-all-btn"
+            className="action-btn highlight-all-btn"
             onClick={() => {
-              onSelectCourse(course.code);
+              onSelectCourse(course.curriculumCode || course.code);
               onClose();
             }}
+            title="Highlight all matching sessions across the timetable"
           >
-            <Check size={16} />
-            Highlight course sessions
+            <Check size={15} /> Highlight
           </button>
         </div>
       </div>

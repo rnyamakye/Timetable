@@ -16,7 +16,6 @@ export const ALL_PERIODS = [
   { id: 15, period: '15', time: '23:00-23:50', start: '23:00', end: '23:50' },
 ];
 
-// Default to all periods up to 11pm (23:00-23:50)
 export const PERIODS = ALL_PERIODS;
 
 export const DAYS = [
@@ -27,8 +26,9 @@ export const DAYS = [
   { key: 'Friday', label: 'Friday', short: 'Fr', dayIndex: 5 },
 ];
 
-// Color palette mapping to match the original image
+// Color palette mapping to match the original image + strategic reviews + CCNA
 export const COURSE_COLORS = {
+  // Official Courses
   'CSM 483': {
     bg: '#fbc4c4',
     border: '#f87171',
@@ -83,6 +83,60 @@ export const COURSE_COLORS = {
     text: '#1f2937',
     badge: '#06b6d4'
   },
+
+  // Strategic Review Colors (Harmonized with parent courses)
+  'CSM 483 Rev': {
+    bg: '#fee2e2',
+    border: '#f87171',
+    text: '#7f1d1d',
+    badge: '#ef4444'
+  },
+  'CSM 477 Rev': {
+    bg: '#e0f2fe',
+    border: '#7dd3fc',
+    text: '#0c4a6e',
+    badge: '#0284c7'
+  },
+  'CSM 497 Rev': {
+    bg: '#f3e8ff',
+    border: '#d8b4fe',
+    text: '#581c87',
+    badge: '#9333ea'
+  },
+  'CSM 481 Rev': {
+    bg: '#dcfce7',
+    border: '#86efac',
+    text: '#14532d',
+    badge: '#22c55e'
+  },
+  'CSM 491 Rev': {
+    bg: '#fef9c3',
+    border: '#fde047',
+    text: '#713f12',
+    badge: '#ca8a04'
+  },
+  'CSM 495 Rev': {
+    bg: '#ffedd5',
+    border: '#fdba74',
+    text: '#7c2d12',
+    badge: '#ea580c'
+  },
+  'MAS 261 Rev': {
+    bg: '#ffe4e6',
+    border: '#fda4af',
+    text: '#881337',
+    badge: '#e11d48'
+  },
+
+  // CCNA Professional Certification Studies
+  'CCNA': {
+    bg: '#dbeafe',
+    border: '#3b82f6',
+    text: '#1e3a8a',
+    badge: '#2563eb'
+  },
+
+  // Generic Study & Lab
   'STUDY': {
     bg: '#fef9c3',
     border: '#facc15',
@@ -97,7 +151,8 @@ export const COURSE_COLORS = {
   }
 };
 
-export const INITIAL_CLASSES = [
+// 1. Official Timetable Lectures (from original university schedule)
+export const OFFICIAL_CLASSES = [
   // Monday
   {
     id: 'mon-csm483',
@@ -112,6 +167,7 @@ export const INITIAL_CLASSES = [
     lecturer: 'Lecturer: B.T. Parley',
     curriculumCode: 'CSM 483',
     colorKey: 'CSM 483',
+    sessionType: 'class'
   },
   {
     id: 'mon-csm477',
@@ -126,6 +182,7 @@ export const INITIAL_CLASSES = [
     lecturer: 'Lecturer: M. ASANTE',
     curriculumCode: 'CSM 477',
     colorKey: 'CSM 477',
+    sessionType: 'class'
   },
   // Tuesday
   {
@@ -141,6 +198,7 @@ export const INITIAL_CLASSES = [
     lecturer: 'Lecturer: N. Ussiph',
     curriculumCode: 'CSM 497',
     colorKey: 'CSM 497',
+    sessionType: 'class'
   },
   // Wednesday
   {
@@ -156,6 +214,7 @@ export const INITIAL_CLASSES = [
     lecturer: 'All Lecturers',
     curriculumCode: 'CS-SEMINAR',
     colorKey: 'CS-SEMINAR',
+    sessionType: 'class'
   },
   {
     id: 'wed-csm481',
@@ -170,6 +229,7 @@ export const INITIAL_CLASSES = [
     lecturer: 'K.A PABBI',
     curriculumCode: 'CSM 481',
     colorKey: 'CSM 481',
+    sessionType: 'class'
   },
   {
     id: 'wed-csm491',
@@ -184,6 +244,7 @@ export const INITIAL_CLASSES = [
     lecturer: 'Lecturer: O. Korriyo',
     curriculumCode: 'CSM 491',
     colorKey: 'CSM 491',
+    sessionType: 'class'
   },
   // Thursday
   {
@@ -199,6 +260,7 @@ export const INITIAL_CLASSES = [
     lecturer: 'Lecturer: F. TWUM',
     curriculumCode: 'CSM 495',
     colorKey: 'CSM 495',
+    sessionType: 'class'
   },
   {
     id: 'thu-mas261',
@@ -213,6 +275,7 @@ export const INITIAL_CLASSES = [
     lecturer: 'Lecturer: C. Adjanor-Doku',
     curriculumCode: 'MGT 471',
     colorKey: 'MAS 261',
+    sessionType: 'class'
   },
   // Friday
   {
@@ -228,6 +291,7 @@ export const INITIAL_CLASSES = [
     lecturer: 'Project Supervisors',
     curriculumCode: 'CSM 489',
     colorKey: 'PROJECT',
+    sessionType: 'class'
   },
   {
     id: 'fri-csm481',
@@ -242,7 +306,192 @@ export const INITIAL_CLASSES = [
     lecturer: 'Lecturer: K.A PABBI',
     curriculumCode: 'CSM 481',
     colorKey: 'CSM 481',
+    sessionType: 'class'
   }
+];
+
+// 2. Strategically Placed Personal Review & CCNA Study Sessions
+// Placed purposefully according to learning consolidation, spaced repetition, and lecture synergy
+export const STRATEGIC_STUDY_SESSIONS = [
+  // MONDAY:
+  // Morning CCNA Networking (Period 3-4: 10:00 - 11:50) -> Cognitively primes student before Data Comms lecture
+  {
+    id: 'study-mon-ccna',
+    sessionType: 'study',
+    day: 'Monday',
+    startPeriod: 3,
+    endPeriod: 4,
+    time: '10:00 - 11:50',
+    room: '',
+    group: '',
+    code: 'CCNA',
+    title: 'CCNA: Network Fundamentals & IPv4/IPv6',
+    lecturer: '',
+    curriculumCode: null,
+    colorKey: 'CCNA',
+    isCustom: false,
+    isCertification: true,
+    description: 'Self-paced Cisco CCNA certification study (OSI model, IP subnetting & protocol architectures).'
+  },
+  // Evening OS Consolidation (Period 12-13: 20:00 - 21:50) -> Post-lecture review of CSM 483
+  {
+    id: 'study-mon-csm483-rev',
+    sessionType: 'study',
+    day: 'Monday',
+    startPeriod: 12,
+    endPeriod: 13,
+    time: '20:00 - 21:50',
+    room: '',
+    group: '',
+    code: 'CSM 483 Rev',
+    title: 'Operating Systems Review',
+    lecturer: '',
+    curriculumCode: 'CSM 483',
+    colorKey: 'CSM 483 Rev',
+    isCustom: false,
+    description: 'Consolidation of OS lectures: Process states, CPU scheduling algorithms & memory allocation.'
+  },
+
+  // TUESDAY:
+  // Morning Data Comms Review (Period 3-4: 10:00 - 11:50) -> Spaced review of Monday's 17:00 Data Comms lecture
+  {
+    id: 'study-tue-csm477-rev',
+    sessionType: 'study',
+    day: 'Tuesday',
+    startPeriod: 3,
+    endPeriod: 4,
+    time: '10:00 - 11:50',
+    room: '',
+    group: '',
+    code: 'CSM 477 Rev',
+    title: 'Data Communications Review',
+    lecturer: '',
+    curriculumCode: 'CSM 477',
+    colorKey: 'CSM 477 Rev',
+    isCustom: false,
+    description: 'Review of signal transmission, Shannon/Nyquist theorem & physical/data link layer protocols.'
+  },
+  // Evening Expert Systems Review (Period 11-12: 19:00 - 20:50) -> Post-lecture review of CSM 497
+  {
+    id: 'study-tue-csm497-rev',
+    sessionType: 'study',
+    day: 'Tuesday',
+    startPeriod: 11,
+    endPeriod: 12,
+    time: '19:00 - 20:50',
+    room: '',
+    group: '',
+    code: 'CSM 497 Rev',
+    title: 'Expert Systems Review',
+    lecturer: '',
+    curriculumCode: 'CSM 497',
+    colorKey: 'CSM 497 Rev',
+    isCustom: false,
+    description: 'Knowledge representation, inference engines, forward/backward chaining & production rules.'
+  },
+
+  // WEDNESDAY:
+  // Afternoon Info Systems Review (Period 7-8: 15:00 - 16:50) -> Solidifies Wednesday 12:00 CSM 481 lecture
+  {
+    id: 'study-wed-csm481-rev',
+    sessionType: 'study',
+    day: 'Wednesday',
+    startPeriod: 7,
+    endPeriod: 8,
+    time: '15:00 - 16:50',
+    room: '',
+    group: '',
+    code: 'CSM 481 Rev',
+    title: 'Information Systems I Review',
+    lecturer: '',
+    curriculumCode: 'CSM 481',
+    colorKey: 'CSM 481 Rev',
+    isCustom: false,
+    description: 'System development life cycle (SDLC), data flow diagrams (DFD) & entity-relationship models.'
+  },
+  // Evening Graph Theory Review (Period 12-13: 20:00 - 21:50) -> Post-lecture review of CSM 491
+  {
+    id: 'study-wed-csm491-rev',
+    sessionType: 'study',
+    day: 'Wednesday',
+    startPeriod: 12,
+    endPeriod: 13,
+    time: '20:00 - 21:50',
+    room: '',
+    group: '',
+    code: 'CSM 491 Rev',
+    title: 'Graph Theory & Applications Review',
+    lecturer: '',
+    curriculumCode: 'CSM 491',
+    colorKey: 'CSM 491 Rev',
+    isCustom: false,
+    description: 'Proof exercises, graph traversal algorithms, Euler/Hamiltonian paths, planar graphs & trees.'
+  },
+
+  // THURSDAY:
+  // Morning CCNA Lab (Period 2-3: 9:00 - 10:50) -> Dedicated hands-on Packet Tracer & router config
+  {
+    id: 'study-thu-ccna',
+    sessionType: 'study',
+    day: 'Thursday',
+    startPeriod: 2,
+    endPeriod: 3,
+    time: '9:00 - 10:50',
+    room: '',
+    group: '',
+    code: 'CCNA',
+    title: 'CCNA: Routing, VLANs & Packet Tracer',
+    lecturer: '',
+    curriculumCode: null,
+    colorKey: 'CCNA',
+    isCustom: false,
+    isCertification: true,
+    description: 'Hands-on Packet Tracer network configuration, switch port security, VLANs & routing protocols.'
+  },
+  // Evening Software Engineering Review (Period 11-12: 19:00 - 20:50) -> Post-lecture review of CSM 495
+  {
+    id: 'study-thu-csm495-rev',
+    sessionType: 'study',
+    day: 'Thursday',
+    startPeriod: 11,
+    endPeriod: 12,
+    time: '19:00 - 20:50',
+    room: '',
+    group: '',
+    code: 'CSM 495 Rev',
+    title: 'Intro to Software Engineering Review',
+    lecturer: '',
+    curriculumCode: 'CSM 495',
+    colorKey: 'CSM 495 Rev',
+    isCustom: false,
+    description: 'Software design patterns, architectural trade-offs, UML diagrams & agile sprint planning.'
+  },
+
+  // FRIDAY:
+  // Morning Management Review (Period 1-2: 8:00 - 9:50) -> Consolidates Thursday 17:00 MAS 261 before Project
+  {
+    id: 'study-fri-mas261-rev',
+    sessionType: 'study',
+    day: 'Friday',
+    startPeriod: 1,
+    endPeriod: 2,
+    time: '8:00 - 9:50',
+    room: '',
+    group: '',
+    code: 'MAS 261 Rev',
+    title: 'Principles of Management Review',
+    lecturer: '',
+    curriculumCode: 'MGT 471',
+    colorKey: 'MAS 261 Rev',
+    isCustom: false,
+    description: 'Organizational behavior, strategic planning, case studies & managerial decision making.'
+  }
+];
+
+// Combine official lectures with strategic study reviews & CCNA slots by default
+export const INITIAL_CLASSES = [
+  ...OFFICIAL_CLASSES,
+  ...STRATEGIC_STUDY_SESSIONS
 ];
 
 export function buildDaySlots(dayName, classList = INITIAL_CLASSES, periodsList = ALL_PERIODS) {

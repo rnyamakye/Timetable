@@ -1,16 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DAYS, buildDaySlots, COURSE_COLORS, ALL_PERIODS } from '../data/timetableData';
-import { Plus } from 'lucide-react';
+import { Plus, GripVertical, CheckCircle2, Circle } from 'lucide-react';
 
 export default function TimetableGrid({ 
   searchTerm = '', 
   selectedCourseCode = null, 
   onCourseClick,
   onEmptyCellClick,
+  onMoveSession,
   selectedDay = 'ALL',
   activePeriods = ALL_PERIODS,
-  classes = []
+  classes = [],
+  completedIds = [],
+  onToggleComplete
 }) {
+  const [draggedSessionId, setDraggedSessionId] = useState(null);
+  const [dragOverCell, setDragOverCell] = useState(null);
+
   const matchesSearch = (slot) => {
     if (!slot || slot.isEmpty) return false;
     if (!searchTerm.trim()) return true;
@@ -60,6 +66,12 @@ export default function TimetableGrid({
           <h3 className="paper-sub-title">Schedule &amp; Curriculum</h3>
         </div>
 
+        {/* Drag and Drop instructions hint */}
+        <div className="drag-hint-banner print-hide">
+          <GripVertical size={14} className="hint-icon" />
+          <span><strong>Interactive Schedule:</strong> Click the circle on any card to mark it completed. Drag &amp; drop to reschedule.</span>
+        </div>
+
         {/* The Main Timetable HTML Table */}
         <div className="table-responsive-wrapper">
           <table className="asc-timetable-table">
@@ -93,16 +105,41 @@ export default function TimetableGrid({
                     {/* Slots in this day */}
                     {slots.map((slot, index) => {
                       if (slot.isEmpty) {
+                        const cellKey = `${dayObj.key}-${slot.periodId}`;
+                        const isDropTarget = dragOverCell === cellKey;
+
                         return (
                           <td 
                             key={`empty-${dayObj.key}-${slot.periodId || index}`} 
                             colSpan={slot.colSpan || 1} 
-                            className="empty-cell"
+                            className={`empty-cell ${isDropTarget ? 'cell-drag-over' : ''}`}
                             onClick={() => onEmptyCellClick && onEmptyCellClick(dayObj.label, slot.periodId, slot.periodTime)}
-                            title={`Click to add a class or study session on ${dayObj.label} at Period ${slot.periodId} (${slot.periodTime})`}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              if (dragOverCell !== cellKey) setDragOverCell(cellKey);
+                            }}
+                            onDragLeave={() => {
+                              if (dragOverCell === cellKey) setDragOverCell(null);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setDragOverCell(null);
+                              const sId = e.dataTransfer.getData('text/plain') || draggedSessionId;
+                              if (sId && onMoveSession) {
+                                onMoveSession(sId, dayObj.label, slot.periodId);
+                              }
+                            }}
+                            title={draggedSessionId 
+                              ? `Drop here to move session to ${dayObj.label} Period ${slot.periodId}` 
+                              : `Click to add a class or study session on ${dayObj.label} at Period ${slot.periodId} (${slot.periodTime})`}
                           >
                             <div className="empty-cell-inner">
-                              <Plus size={14} className="add-slot-icon print-hide" />
+                              {isDropTarget ? (
+                                <span className="drop-indicator-badge">Move Here</span>
+                              ) : (
+                                <Plus size={14} className="add-slot-icon print-hide" />
+                              )}
                             </div>
                           </td>
                         );
@@ -117,34 +154,86 @@ export default function TimetableGrid({
                       const highlighted = isHighlighted(slot);
                       const dimmed = isDimmed(slot);
                       const searchMatched = searchTerm.trim() && matchesSearch(slot);
+                      const isBeingDragged = draggedSessionId === slot.id;
+                      const cellKey = `${dayObj.key}-${slot.startPeriod}`;
+                      const isDropTarget = dragOverCell === cellKey && draggedSessionId !== slot.id;
+                      const isCompleted = completedIds.includes(slot.id);
 
                       return (
                         <td 
                           key={`slot-${dayObj.key}-${index}`} 
                           colSpan={slot.colSpan}
-                          className="schedule-slot-cell"
+                          className={`schedule-slot-cell ${isDropTarget ? 'cell-drag-over' : ''}`}
+                          onDragOver={(e) => {
+                            if (draggedSessionId && draggedSessionId !== slot.id) {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              if (dragOverCell !== cellKey) setDragOverCell(cellKey);
+                            }
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverCell === cellKey) setDragOverCell(null);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setDragOverCell(null);
+                            const sId = e.dataTransfer.getData('text/plain') || draggedSessionId;
+                            if (sId && onMoveSession && sId !== slot.id) {
+                              onMoveSession(sId, dayObj.label, slot.startPeriod);
+                            }
+                          }}
                         >
                           <div 
-                            className={`course-card ${highlighted ? 'card-highlighted' : ''} ${dimmed ? 'card-dimmed' : ''} ${searchMatched ? 'card-search-hit' : ''}`}
+                            draggable={true}
+                            onDragStart={(e) => {
+                              setDraggedSessionId(slot.id);
+                              e.dataTransfer.setData('text/plain', slot.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                            onDragEnd={() => {
+                              setDraggedSessionId(null);
+                              setDragOverCell(null);
+                            }}
+                            className={`course-card ${highlighted ? 'card-highlighted' : ''} ${dimmed ? 'card-dimmed' : ''} ${searchMatched ? 'card-search-hit' : ''} ${isBeingDragged ? 'card-is-dragging' : ''} ${isCompleted ? 'card-is-completed' : ''}`}
                             style={{
                               backgroundColor: colors.bg,
-                              borderColor: colors.border,
+                              borderColor: isCompleted ? '#16a34a' : colors.border,
                               color: colors.text
                             }}
                             onClick={() => onCourseClick({ ...slot, day: dayObj.label })}
-                            title="Click to view full course details"
+                            title="Drag to reschedule • Click to view details"
                           >
-                            {/* Card Header: Room on Left, Group on Right */}
-                            {(slot.room || slot.group) && (
-                              <div className="card-top-meta">
-                                <span className="card-room">{slot.room || ''}</span>
-                                <span className="card-group">{slot.group || ''}</span>
+                            {/* Card Header: Room on Left, Habit Check + Grip/Group on Right */}
+                            <div className="card-top-meta">
+                              <span className="card-room">{slot.room || ''}</span>
+                              <div className="card-top-right">
+                                {slot.group && <span className="card-group">{slot.group}</span>}
+
+                                {/* Habit Completion Check Toggle */}
+                                <button
+                                  type="button"
+                                  className={`card-habit-check-btn print-hide ${isCompleted ? 'checked' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleComplete && onToggleComplete(slot.id);
+                                  }}
+                                  title={isCompleted ? "Marked Done! Click to unmark" : "Mark as completed / attended"}
+                                >
+                                  {isCompleted ? (
+                                    <CheckCircle2 size={13} className="check-done-icon" />
+                                  ) : (
+                                    <Circle size={13} className="check-empty-icon" />
+                                  )}
+                                </button>
+
+                                <GripVertical size={12} className="drag-handle-grip print-hide" />
                               </div>
-                            )}
+                            </div>
 
                             {/* Card Center: Course Code (Bold) */}
                             <div className={`card-code ${slot.code === 'PROJECT' ? 'card-code-large' : ''}`}>
                               {slot.code}
+                              {isCompleted && <span className="card-done-badge print-hide">✓ Done</span>}
                             </div>
 
                             {/* Card Title */}
