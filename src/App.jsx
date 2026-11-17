@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import StatsBar from './components/StatsBar';
 import HabitTracker from './components/HabitTracker';
@@ -8,7 +8,15 @@ import MobileAgendaView from './components/MobileAgendaView';
 import CourseModal from './components/CourseModal';
 import AddSessionModal from './components/AddSessionModal';
 import EditSessionModal from './components/EditSessionModal';
+import DeviceSyncModal from './components/DeviceSyncModal';
 import { INITIAL_CLASSES, ALL_PERIODS } from './data/timetableData';
+import { 
+  fetchTimetableFromServer, 
+  pushTimetableToServer, 
+  resetTimetableOnServer, 
+  fetchServerHealth, 
+  initLiveSyncStream 
+} from './services/syncService';
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,11 +26,34 @@ export default function App() {
   const [modalCourse, setModalCourse] = useState(null);
   const [editingSession, setEditingSession] = useState(null);
 
+  // Cloud & Multi-Device Sync State
+  const [syncStatus, setSyncStatus] = useState('connecting'); // 'connected' | 'connecting' | 'offline'
+  const [connectedDevices, setConnectedDevices] = useState(1);
+  const [localIPs, setLocalIPs] = useState([]);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+
   // Period range: 'until-11pm' (15 periods, 8:00 - 23:50) default
   const [periodRange, setPeriodRange] = useState('until-11pm');
   // Schedule preset: 'all' (Lectures + Strategic Reviews + CCNA), 'classes-only', 'study-only'
   const [schedulePreset, setSchedulePreset] = useState('all');
-  const [classes, setClasses] = useState(INITIAL_CLASSES);
+
+  // Timetable Sessions (persisted in localStorage)
+  const [classes, setClasses] = useState(() => {
+    try {
+      const saved = localStorage.getItem('timetable_custom_classes');
+      return saved ? JSON.parse(saved) : INITIAL_CLASSES;
+    } catch {
+      return INITIAL_CLASSES;
+    }
+  });
+
+  const saveClassesToStorage = (newClassesList) => {
+    try {
+      localStorage.setItem('timetable_custom_classes', JSON.stringify(newClassesList));
+    } catch (err) {
+      console.error('Failed to save timetable to localStorage:', err);
+    }
+  };
 
   // Habit Tracking State (persisted in localStorage)
   const [completedIds, setCompletedIds] = useState(() => {
@@ -72,6 +103,103 @@ export default function App() {
   const [addModalInitialDay, setAddModalInitialDay] = useState('Monday');
   const [addModalInitialPeriod, setAddModalInitialPeriod] = useState(11);
 
+  // Helper to push state changes to the Express server (broadcasts to other devices)
+  const syncChangeToServer = (updatedPayload) => {
+    pushTimetableToServer(updatedPayload).catch(err => {
+      console.warn('Backend sync failed, saved locally:', err);
+    });
+  };
+
+  // Connect to Express backend for live real-time sync across devices
+  useEffect(() => {
+    // 1. Fetch server health and local IP addresses
+    fetchServerHealth().then(data => {
+      if (data?.localIPs) setLocalIPs(data.localIPs);
+      if (data?.connectedDevices) setConnectedDevices(data.connectedDevices);
+    });
+
+    // 2. Fetch latest data from server to reconcile on startup
+    fetchTimetableFromServer()
+      .then(serverData => {
+        if (serverData && Array.isArray(serverData.classes)) {
+          setClasses(serverData.classes);
+          localStorage.setItem('timetable_custom_classes', JSON.stringify(serverData.classes));
+        }
+        if (serverData?.completedIds) {
+          setCompletedIds(serverData.completedIds);
+          localStorage.setItem('timetable_completed_ids', JSON.stringify(serverData.completedIds));
+        }
+        if (serverData?.streakDays !== undefined) {
+          setStreakDays(serverData.streakDays);
+          localStorage.setItem('timetable_streak_days', String(serverData.streakDays));
+        }
+        if (serverData?.habitHistory) {
+          setHabitHistory(serverData.habitHistory);
+          localStorage.setItem('timetable_habit_history', JSON.stringify(serverData.habitHistory));
+        }
+        setSyncStatus('connected');
+      })
+      .catch(err => {
+        console.warn('Backend server not reachable, using offline localStorage data:', err);
+        setSyncStatus('offline');
+      });
+
+    // 3. Connect to live SSE stream for real-time broadcasts
+    const unsubscribe = initLiveSyncStream({
+      onUpdate: (payload) => {
+        if (payload.classes) {
+          setClasses(payload.classes);
+          localStorage.setItem('timetable_custom_classes', JSON.stringify(payload.classes));
+        }
+        if (payload.completedIds) {
+          setCompletedIds(payload.completedIds);
+          localStorage.setItem('timetable_completed_ids', JSON.stringify(payload.completedIds));
+        }
+        if (payload.streakDays !== undefined) {
+          setStreakDays(payload.streakDays);
+          localStorage.setItem('timetable_streak_days', String(payload.streakDays));
+        }
+        if (payload.habitHistory) {
+          setHabitHistory(payload.habitHistory);
+          localStorage.setItem('timetable_habit_history', JSON.stringify(payload.habitHistory));
+        }
+      },
+      onStatusChange: (status) => {
+        setSyncStatus(status);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const handleManualSync = async () => {
+    try {
+      const serverData = await fetchTimetableFromServer();
+      if (serverData && Array.isArray(serverData.classes)) {
+        setClasses(serverData.classes);
+        localStorage.setItem('timetable_custom_classes', JSON.stringify(serverData.classes));
+      }
+      if (serverData?.completedIds) {
+        setCompletedIds(serverData.completedIds);
+        localStorage.setItem('timetable_completed_ids', JSON.stringify(serverData.completedIds));
+      }
+      if (serverData?.streakDays !== undefined) {
+        setStreakDays(serverData.streakDays);
+        localStorage.setItem('timetable_streak_days', String(serverData.streakDays));
+      }
+      if (serverData?.habitHistory) {
+        setHabitHistory(serverData.habitHistory);
+        localStorage.setItem('timetable_habit_history', JSON.stringify(serverData.habitHistory));
+      }
+      setSyncStatus('connected');
+    } catch (err) {
+      console.warn('Manual sync failed:', err);
+      setSyncStatus('offline');
+    }
+  };
+
   const activePeriods = useMemo(() => {
     if (periodRange === 'standard') {
       return ALL_PERIODS.slice(0, 10);
@@ -110,47 +238,78 @@ export default function App() {
   };
 
   const handleAddSession = (newSession) => {
-    setClasses(prev => [...prev, newSession]);
+    setClasses(prev => {
+      const next = [...prev, newSession];
+      saveClassesToStorage(next);
+      syncChangeToServer({ classes: next });
+      return next;
+    });
   };
 
   const handleUpdateSession = (updatedSession) => {
-    setClasses(prev => prev.map(c => c.id === updatedSession.id ? updatedSession : c));
+    setClasses(prev => {
+      const next = prev.map(c => c.id === updatedSession.id ? updatedSession : c);
+      saveClassesToStorage(next);
+      syncChangeToServer({ classes: next });
+      return next;
+    });
   };
 
   const handleMoveSession = (sessionId, targetDay, targetStartPeriod) => {
-    setClasses(prev => prev.map(c => {
-      if (c.id !== sessionId) return c;
+    setClasses(prev => {
+      const next = prev.map(c => {
+        if (c.id !== sessionId) return c;
 
-      const span = Math.max(1, (c.endPeriod - c.startPeriod + 1) || 1);
-      let startP = Number(targetStartPeriod);
-      let endP = startP + span - 1;
+        const span = Math.max(1, (c.endPeriod - c.startPeriod + 1) || 1);
+        let startP = Number(targetStartPeriod);
+        let endP = startP + span - 1;
 
-      // Ensure it does not overflow past the max active periods
-      if (endP > activePeriods.length) {
-        endP = activePeriods.length;
-        startP = Math.max(1, endP - span + 1);
-      }
+        // Ensure it does not overflow past the max active periods
+        if (endP > activePeriods.length) {
+          endP = activePeriods.length;
+          startP = Math.max(1, endP - span + 1);
+        }
 
-      const startObj = activePeriods.find(p => p.id === startP);
-      const endObj = activePeriods.find(p => p.id === endP);
-      const timeString = `${startObj ? startObj.start : '08:00'} - ${endObj ? endObj.end : '08:50'}`;
+        const startObj = activePeriods.find(p => p.id === startP);
+        const endObj = activePeriods.find(p => p.id === endP);
+        const timeString = `${startObj ? startObj.start : '08:00'} - ${endObj ? endObj.end : '08:50'}`;
 
-      return {
-        ...c,
-        day: targetDay,
-        startPeriod: startP,
-        endPeriod: endP,
-        time: timeString
-      };
-    }));
+        return {
+          ...c,
+          day: targetDay,
+          startPeriod: startP,
+          endPeriod: endP,
+          time: timeString
+        };
+      });
+      saveClassesToStorage(next);
+      syncChangeToServer({ classes: next });
+      return next;
+    });
   };
 
   const handleDeleteSession = (sessionId) => {
-    setClasses(prev => prev.filter(c => c.id !== sessionId));
-    setCompletedIds(prev => prev.filter(id => id !== sessionId));
+    let nextClassesList;
+    setClasses(prev => {
+      nextClassesList = prev.filter(c => c.id !== sessionId);
+      saveClassesToStorage(nextClassesList);
+      return nextClassesList;
+    });
+
+    setCompletedIds(prev => {
+      const next = prev.filter(id => id !== sessionId);
+      try {
+        localStorage.setItem('timetable_completed_ids', JSON.stringify(next));
+      } catch (err) {
+        console.error(err);
+      }
+      syncChangeToServer({ classes: nextClassesList, completedIds: next });
+      return next;
+    });
   };
 
   const handleToggleComplete = (sessionId) => {
+    let nextCompletedIds;
     setCompletedIds(prev => {
       const isRemoving = prev.includes(sessionId);
       const next = isRemoving
@@ -161,6 +320,7 @@ export default function App() {
       } catch (err) {
         console.error(err);
       }
+      nextCompletedIds = next;
       return next;
     });
 
@@ -177,25 +337,13 @@ export default function App() {
       } catch (err) {
         console.error(err);
       }
+      syncChangeToServer({ completedIds: nextCompletedIds, habitHistory: nextHistory });
       return nextHistory;
     });
   };
 
   const handleToggleDayHabit = (dateKey, sessionId) => {
-    setHabitHistory(prev => {
-      const dayList = prev[dateKey] || [];
-      const updatedList = dayList.includes(sessionId)
-        ? dayList.filter(id => id !== sessionId)
-        : [...dayList, sessionId];
-      const nextHistory = { ...prev, [dateKey]: updatedList };
-      try {
-        localStorage.setItem('timetable_habit_history', JSON.stringify(nextHistory));
-      } catch (err) {
-        console.error(err);
-      }
-      return nextHistory;
-    });
-
+    let nextCompletedIds;
     // If toggling for today, also keep current weekly completedIds in sync
     if (dateKey === '2026-11-11') {
       setCompletedIds(prev => {
@@ -207,9 +355,28 @@ export default function App() {
         } catch (err) {
           console.error(err);
         }
+        nextCompletedIds = next;
         return next;
       });
     }
+
+    setHabitHistory(prev => {
+      const dayList = prev[dateKey] || [];
+      const updatedList = dayList.includes(sessionId)
+        ? dayList.filter(id => id !== sessionId)
+        : [...dayList, sessionId];
+      const nextHistory = { ...prev, [dateKey]: updatedList };
+      try {
+        localStorage.setItem('timetable_habit_history', JSON.stringify(nextHistory));
+      } catch (err) {
+        console.error(err);
+      }
+      syncChangeToServer({ 
+        habitHistory: nextHistory,
+        ...(nextCompletedIds ? { completedIds: nextCompletedIds } : {})
+      });
+      return nextHistory;
+    });
   };
 
   const handleResetProgress = () => {
@@ -220,12 +387,21 @@ export default function App() {
       } catch (err) {
         console.error(err);
       }
+      syncChangeToServer({ completedIds: [] });
     }
   };
 
   const handleResetSchedule = () => {
     if (window.confirm('Reset timetable to the default strategic schedule?')) {
       setClasses(INITIAL_CLASSES);
+      try {
+        localStorage.removeItem('timetable_custom_classes');
+      } catch (err) {
+        console.error(err);
+      }
+      resetTimetableOnServer().catch(err => {
+        console.warn('Server reset failed:', err);
+      });
     }
   };
 
@@ -246,6 +422,9 @@ export default function App() {
         setPeriodRange={setPeriodRange}
         schedulePreset={schedulePreset}
         setSchedulePreset={setSchedulePreset}
+        syncStatus={syncStatus}
+        connectedDevices={connectedDevices}
+        onOpenSyncModal={() => setIsSyncModalOpen(true)}
         onOpenAddModal={() => {
           setAddModalInitialDay('Monday');
           setAddModalInitialPeriod(11);
@@ -389,6 +568,16 @@ export default function App() {
           activePeriods={activePeriods}
         />
       )}
+
+      {/* Multi-Device Cloud Sync Connection Modal */}
+      <DeviceSyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        syncStatus={syncStatus}
+        connectedDevices={connectedDevices}
+        localIPs={localIPs}
+        onManualSync={handleManualSync}
+      />
     </div>
   );
 }

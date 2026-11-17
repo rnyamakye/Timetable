@@ -24,7 +24,9 @@ export default function Header({
   setPeriodRange,
   schedulePreset,
   setSchedulePreset,
-  onOpenAddModal
+  onOpenAddModal,
+  syncStatus = 'connected',
+  onOpenSyncModal
 }) {
   return (
     <header className="timetable-header">
@@ -39,6 +41,19 @@ export default function Header({
         </div>
 
         <div className="header-actions">
+          {/* Live Device Sync Status Pill */}
+          <button 
+            type="button"
+            className={`action-btn sync-pill-btn ${syncStatus}`}
+            onClick={onOpenSyncModal}
+            title={syncStatus === 'connected' ? 'Cloud Synced across all devices. Click to view connect info' : 'Click to view device sync settings'}
+          >
+            <span className={`sync-status-dot ${syncStatus}`} />
+            <span className="sync-btn-label">
+              {syncStatus === 'connected' ? 'Live Synced' : syncStatus === 'connecting' ? 'Syncing...' : 'Offline'}
+            </span>
+          </button>
+
           <button 
             type="button"
             className="action-btn success-btn print-hide"
