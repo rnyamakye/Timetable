@@ -363,6 +363,8 @@ export default function App() {
           onEditSession={(session) => setEditingSession(session)}
           isCompleted={completedIds.includes(modalCourse.id)}
           onToggleComplete={handleToggleComplete}
+          habitHistory={habitHistory}
+          onToggleDayHabit={handleToggleDayHabit}
         />
       )}
 

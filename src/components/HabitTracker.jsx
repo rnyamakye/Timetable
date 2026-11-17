@@ -21,7 +21,7 @@ export default function HabitTracker({
   habitHistory = {},
   onToggleDayHabit
 }) {
-  const [showMonthlyMatrix, setShowMonthlyMatrix] = useState(true);
+  const [showMonthlyMatrix, setShowMonthlyMatrix] = useState(false);
 
   const totalSessions = classes.length;
   const completedSessions = classes.filter(c => completedIds.includes(c.id));
