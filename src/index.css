@@ -3219,3 +3219,522 @@ body {
     display: none;
   }
 }
+
+/* ==========================================================================
+   Real-Time Activity & Time-of-Day Live Highlighting
+   ========================================================================== */
+
+/* Keyframe Animations for Live Ping and Glow */
+@keyframes live-ping {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 7px rgba(220, 38, 38, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+
+@keyframes live-card-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px #2563eb, 0 6px 20px rgba(37, 99, 235, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4.5px #1d4ed8, 0 8px 26px rgba(37, 99, 235, 0.55);
+  }
+}
+
+@keyframes live-ping-dot-glow {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.4);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Current Activity Top Banner */
+.current-activity-banner {
+  margin-bottom: 1.25rem;
+  border-radius: 14px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.current-activity-banner.has-active-session {
+  background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 50%, #faf5ff 100%);
+  border: 1.5px solid #93c5fd;
+  box-shadow: 0 6px 22px -3px rgba(37, 99, 235, 0.15);
+}
+
+.current-activity-banner.is-break-time {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+}
+
+.activity-banner-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.35rem;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.activity-live-indicator-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 170px;
+}
+
+.live-pulse-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
+  width: fit-content;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+  animation: live-ping 2s infinite ease-in-out;
+}
+
+.live-pulse-badge .live-icon {
+  animation: live-ping-dot-glow 1.5s infinite;
+}
+
+.live-ping-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  display: inline-block;
+  animation: live-ping-dot-glow 1.2s infinite;
+}
+
+.break-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #e2e8f0;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  letter-spacing: 0.03em;
+  width: fit-content;
+}
+
+.banner-clock-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.current-period-tag {
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+}
+
+/* Center Content */
+.activity-content-center {
+  flex: 1;
+  min-width: 260px;
+}
+
+.active-session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.active-code-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.active-course-pill {
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid;
+  letter-spacing: 0.02em;
+}
+
+.active-title-text {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #0f172a;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.active-title-text:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.active-completed-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: #dcfce7;
+  color: #15803d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid #bbf7d0;
+}
+
+.active-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  color: #475569;
+}
+
+.meta-time-chip,
+.meta-room-chip,
+.meta-lecturer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+}
+
+.minutes-left-highlight {
+  color: #2563eb;
+  font-weight: 800;
+  margin-left: 0.25rem;
+}
+
+.meta-type-chip.study {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: #e0e7ff;
+  color: #3730a3;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+/* Break / Free Time State */
+.break-time-info {
+  display: flex;
+  align-items: center;
+}
+
+.next-up-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.next-up-label {
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+}
+
+.next-code-badge {
+  font-weight: 800;
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  padding: 0.22rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.next-code-badge:hover {
+  background-color: #bfdbfe;
+  transform: translateY(-1px);
+}
+
+.next-time-tag {
+  color: #475569;
+  font-weight: 700;
+}
+
+.no-more-sessions-note {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Right Quick Actions */
+.activity-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.banner-quick-check-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background-color: #ffffff;
+  color: #2563eb;
+  border: 1.5px solid #2563eb;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.banner-quick-check-btn:hover {
+  background-color: #eff6ff;
+  transform: translateY(-1px);
+}
+
+.banner-quick-check-btn.is-checked {
+  background-color: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+}
+
+.banner-quick-check-btn.is-checked:hover {
+  background-color: #15803d;
+}
+
+.banner-details-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background-color: #0f172a;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.banner-details-btn:hover {
+  background-color: #1e293b;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Table & Grid Real-Time Highlights
+   ========================================================================== */
+
+/* Highlighting the Period Column Header when it matches current time */
+.period-col-header.period-col-is-now {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-bottom: 3px solid #2563eb !important;
+  box-shadow: inset 0 -2px 0 #2563eb;
+}
+
+.period-col-is-now .period-number {
+  color: #1e40af;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.now-column-tag {
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 0.56rem;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  animation: live-ping-dot-glow 1.8s infinite;
+}
+
+/* Highlighting the Today Row */
+.day-row.day-row-is-today {
+  background-color: rgba(239, 246, 255, 0.4);
+}
+
+.day-label-cell.day-label-is-today {
+  background-color: #eff6ff !important;
+  border-left: 4px solid #2563eb !important;
+  color: #1e40af !important;
+}
+
+.day-label-is-today .day-full-name {
+  color: #1d4ed8;
+  font-weight: 900;
+}
+
+.today-row-tag {
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 0.56rem;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-left: 4px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* The Active Card that should be performed right now */
+.course-card.card-is-active-now {
+  position: relative !important;
+  border: 2px solid #2563eb !important;
+  animation: live-card-pulse 2.2s infinite ease-in-out !important;
+  transform: scale(1.02);
+  z-index: 8;
+}
+
+.card-live-now-badge {
+  position: absolute;
+  top: -8px;
+  right: 6px;
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 0.58rem;
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.4);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.live-ping-dot-sm {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  display: inline-block;
+  animation: live-ping-dot-glow 1.2s infinite;
+}
+
+/* Highlight empty slot if user is currently in a free period */
+.empty-cell.empty-cell-is-now {
+  background-color: rgba(224, 242, 254, 0.55) !important;
+  border: 1.5px dashed #0284c7 !important;
+  position: relative;
+}
+
+.cell-slot-is-now {
+  background-color: rgba(239, 246, 255, 0.5);
+}
+
+/* ==========================================================================
+   Mobile Agenda Real-Time Highlights
+   ========================================================================== */
+.agenda-day-card.agenda-day-is-today {
+  border-left: 5px solid #2563eb;
+  background-color: #fafbfc;
+}
+
+.agenda-today-pill {
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
+  margin-left: 6px;
+}
+
+.agenda-session-card.session-active-now {
+  box-shadow: 0 0 0 2.5px #2563eb, 0 6px 18px rgba(37, 99, 235, 0.22) !important;
+  transform: translateY(-1px);
+}
+
+.agenda-live-now-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
+  margin-left: 4px;
+}
+
+.live-ping-dot-xs {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  display: inline-block;
+  animation: live-ping-dot-glow 1.2s infinite;
+}
+
+/* Responsive banner adjustments */
+@media (max-width: 900px) {
+  .activity-banner-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+  }
+  .activity-content-center {
+    width: 100%;
+    min-width: 0;
+  }
+  .activity-actions-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .active-title-text {
+    font-size: 0.88rem;
+  }
+}

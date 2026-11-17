@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
+# Local server database & runtime data
+server/data/
+

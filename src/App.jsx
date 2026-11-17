@@ -9,7 +9,9 @@ import CourseModal from './components/CourseModal';
 import AddSessionModal from './components/AddSessionModal';
 import EditSessionModal from './components/EditSessionModal';
 import DeviceSyncModal from './components/DeviceSyncModal';
+import CurrentActivityBanner from './components/CurrentActivityBanner';
 import { INITIAL_CLASSES, ALL_PERIODS } from './data/timetableData';
+import { getCurrentScheduleTime, getActiveAndNextSession } from './utils/timeTracker';
 import { 
   fetchTimetableFromServer, 
   pushTimetableToServer, 
@@ -36,6 +38,16 @@ export default function App() {
   const [periodRange, setPeriodRange] = useState('until-11pm');
   // Schedule preset: 'all' (Lectures + Strategic Reviews + CCNA), 'classes-only', 'study-only'
   const [schedulePreset, setSchedulePreset] = useState('all');
+
+  // Real-time Schedule Clock (auto-refreshes every 30s)
+  const [scheduleTime, setScheduleTime] = useState(() => getCurrentScheduleTime());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setScheduleTime(getCurrentScheduleTime());
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Timetable Sessions (persisted in localStorage)
   const [classes, setClasses] = useState(() => {
@@ -220,6 +232,11 @@ export default function App() {
     }
     return classes;
   }, [classes, schedulePreset]);
+
+  // Compute active session happening now and the next upcoming session today
+  const { activeSession, nextSession, minutesUntilNext, minutesRemaining } = useMemo(() => {
+    return getActiveAndNextSession(classes, scheduleTime);
+  }, [classes, scheduleTime]);
 
   const handleSelectCourse = (code) => {
     setSelectedCourseCode(prev => prev === code ? null : code);
@@ -438,6 +455,18 @@ export default function App() {
           selectedCourseCode={selectedCourseCode}
         />
 
+        {/* Real-time Time & Active Activity Highlighting Banner */}
+        <CurrentActivityBanner
+          scheduleTime={scheduleTime}
+          activeSession={activeSession}
+          nextSession={nextSession}
+          minutesRemaining={minutesRemaining}
+          minutesUntilNext={minutesUntilNext}
+          onCourseClick={(course) => setModalCourse(course)}
+          onToggleComplete={handleToggleComplete}
+          completedIds={completedIds}
+        />
+
         {/* Habit & Progress Tracker Card with Monthly Dot Matrix */}
         <HabitTracker 
           classes={classes}
@@ -498,6 +527,8 @@ export default function App() {
               selectedDay={selectedDay}
               activePeriods={activePeriods}
               classes={displayedClasses}
+              scheduleTime={scheduleTime}
+              activeSession={activeSession}
             />
 
             {/* The exact Curriculum table below it */}
@@ -519,6 +550,8 @@ export default function App() {
             selectedCourseCode={selectedCourseCode}
             classes={displayedClasses}
             activePeriods={activePeriods}
+            scheduleTime={scheduleTime}
+            activeSession={activeSession}
           />
         )}
 

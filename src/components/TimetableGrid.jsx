@@ -12,7 +12,9 @@ export default function TimetableGrid({
   activePeriods = ALL_PERIODS,
   classes = [],
   completedIds = [],
-  onToggleComplete
+  onToggleComplete,
+  scheduleTime = null,
+  activeSession = null
 }) {
   const [draggedSessionId, setDraggedSessionId] = useState(null);
   const [dragOverCell, setDragOverCell] = useState(null);
@@ -78,27 +80,37 @@ export default function TimetableGrid({
             <thead>
               <tr>
                 <th className="day-col-header" style={{ width: '8%', minWidth: '70px' }}></th>
-                {activePeriods.map(period => (
-                  <th 
-                    key={period.id} 
-                    className="period-col-header" 
-                    style={{ width: periodColWidth, minWidth: '68px' }}
-                  >
-                    <div className="period-number">{period.period}</div>
-                    <div className="period-time">{period.time}</div>
-                  </th>
-                ))}
+                {activePeriods.map(period => {
+                  const isCurrentPeriod = scheduleTime && scheduleTime.currentPeriodId === period.id && !scheduleTime.isWeekend;
+                  return (
+                    <th 
+                      key={period.id} 
+                      className={`period-col-header ${isCurrentPeriod ? 'period-col-is-now' : ''}`} 
+                      style={{ width: periodColWidth, minWidth: '68px' }}
+                    >
+                      <div className="period-number">
+                        <span>{period.period}</span>
+                        {isCurrentPeriod && <span className="now-column-tag print-hide">NOW</span>}
+                      </div>
+                      <div className="period-time">{period.time}</div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {visibleDays.map(dayObj => {
                 const slots = buildDaySlots(dayObj.key, classes, activePeriods);
+                const isTodayRow = scheduleTime && scheduleTime.dayName === dayObj.label;
 
                 return (
-                  <tr key={dayObj.key} className="day-row">
+                  <tr key={dayObj.key} className={`day-row ${isTodayRow ? 'day-row-is-today' : ''}`}>
                     {/* Day label cell with full name and short abbreviation */}
-                    <td className="day-label-cell">
-                      <div className="day-full-name">{dayObj.label}</div>
+                    <td className={`day-label-cell ${isTodayRow ? 'day-label-is-today' : ''}`}>
+                      <div className="day-full-name">
+                        <span>{dayObj.label}</span>
+                        {isTodayRow && <span className="today-row-tag print-hide">TODAY</span>}
+                      </div>
                       <div className="day-short-name">{dayObj.short}</div>
                     </td>
 
@@ -107,12 +119,13 @@ export default function TimetableGrid({
                       if (slot.isEmpty) {
                         const cellKey = `${dayObj.key}-${slot.periodId}`;
                         const isDropTarget = dragOverCell === cellKey;
+                        const isCurrentEmptySlot = isTodayRow && scheduleTime && scheduleTime.currentPeriodId === slot.periodId;
 
                         return (
                           <td 
                             key={`empty-${dayObj.key}-${slot.periodId || index}`} 
                             colSpan={slot.colSpan || 1} 
-                            className={`empty-cell ${isDropTarget ? 'cell-drag-over' : ''}`}
+                            className={`empty-cell ${isDropTarget ? 'cell-drag-over' : ''} ${isCurrentEmptySlot ? 'empty-cell-is-now' : ''}`}
                             onClick={() => onEmptyCellClick && onEmptyCellClick(dayObj.label, slot.periodId, slot.periodTime)}
                             onDragOver={(e) => {
                               e.preventDefault();
@@ -137,6 +150,8 @@ export default function TimetableGrid({
                             <div className="empty-cell-inner">
                               {isDropTarget ? (
                                 <span className="drop-indicator-badge">Move Here</span>
+                              ) : isCurrentEmptySlot ? (
+                                <span className="now-free-slot-badge print-hide">Current Slot</span>
                               ) : (
                                 <Plus size={14} className="add-slot-icon print-hide" />
                               )}
@@ -158,12 +173,13 @@ export default function TimetableGrid({
                       const cellKey = `${dayObj.key}-${slot.startPeriod}`;
                       const isDropTarget = dragOverCell === cellKey && draggedSessionId !== slot.id;
                       const isCompleted = completedIds.includes(slot.id);
+                      const isCardActiveNow = activeSession && activeSession.id === slot.id;
 
                       return (
                         <td 
                           key={`slot-${dayObj.key}-${index}`} 
                           colSpan={slot.colSpan}
-                          className={`schedule-slot-cell ${isDropTarget ? 'cell-drag-over' : ''}`}
+                          className={`schedule-slot-cell ${isDropTarget ? 'cell-drag-over' : ''} ${isCardActiveNow ? 'cell-slot-is-now' : ''}`}
                           onDragOver={(e) => {
                             if (draggedSessionId && draggedSessionId !== slot.id) {
                               e.preventDefault();
@@ -194,15 +210,23 @@ export default function TimetableGrid({
                               setDraggedSessionId(null);
                               setDragOverCell(null);
                             }}
-                            className={`course-card ${highlighted ? 'card-highlighted' : ''} ${dimmed ? 'card-dimmed' : ''} ${searchMatched ? 'card-search-hit' : ''} ${isBeingDragged ? 'card-is-dragging' : ''} ${isCompleted ? 'card-is-completed' : ''}`}
+                            className={`course-card ${highlighted ? 'card-highlighted' : ''} ${dimmed ? 'card-dimmed' : ''} ${searchMatched ? 'card-search-hit' : ''} ${isBeingDragged ? 'card-is-dragging' : ''} ${isCompleted ? 'card-is-completed' : ''} ${isCardActiveNow ? 'card-is-active-now' : ''}`}
                             style={{
                               backgroundColor: colors.bg,
-                              borderColor: isCompleted ? '#16a34a' : colors.border,
+                              borderColor: isCompleted ? '#16a34a' : isCardActiveNow ? '#2563eb' : colors.border,
                               color: colors.text
                             }}
                             onClick={() => onCourseClick({ ...slot, day: dayObj.label })}
-                            title="Drag to reschedule • Click to view details"
+                            title={isCardActiveNow ? "HAPPENING NOW! Click to view details" : "Drag to reschedule • Click to view details"}
                           >
+                            {/* Live Active Now Badge for Current Course */}
+                            {isCardActiveNow && (
+                              <div className="card-live-now-badge print-hide" title="This session is scheduled right now!">
+                                <span className="live-ping-dot-sm" />
+                                <span>LIVE NOW</span>
+                              </div>
+                            )}
+
                             {/* Card Header: Room on Left, Habit Check + Grip/Group on Right */}
                             <div className="card-top-meta">
                               <span className="card-room">{slot.room || ''}</span>

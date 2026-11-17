@@ -10,7 +10,9 @@ export default function MobileAgendaView({
   completedIds = [],
   selectedCourseCode,
   classes = [],
-  activePeriods = ALL_PERIODS
+  activePeriods = ALL_PERIODS,
+  scheduleTime = null,
+  activeSession = null
 }) {
   const [dragOverDay, setDragOverDay] = useState(null);
 
@@ -26,11 +28,12 @@ export default function MobileAgendaView({
           const slots = buildDaySlots(dayObj.key, classes, activePeriods);
           const activeSlots = slots.filter(s => !s.isEmpty);
           const isDropTarget = dragOverDay === dayObj.key;
+          const isToday = scheduleTime && scheduleTime.dayName === dayObj.label;
 
           return (
             <div 
               key={dayObj.key} 
-              className={`agenda-day-card ${isDropTarget ? 'agenda-day-drag-over' : ''}`}
+              className={`agenda-day-card ${isDropTarget ? 'agenda-day-drag-over' : ''} ${isToday ? 'agenda-day-is-today' : ''}`}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
@@ -54,6 +57,7 @@ export default function MobileAgendaView({
                 <div className="day-name-badge">
                   <span className="badge-short">{dayObj.short}</span>
                   <span className="badge-full">{dayObj.label}</span>
+                  {isToday && <span className="agenda-today-pill print-hide">TODAY</span>}
                 </div>
                 <div className="agenda-header-actions">
                   <span className="class-count">
@@ -91,6 +95,7 @@ export default function MobileAgendaView({
                     };
                     const isSelected = selectedCourseCode === slot.code;
                     const isCompleted = completedIds.includes(slot.id);
+                    const isCardActiveNow = activeSession && activeSession.id === slot.id;
 
                     return (
                       <div 
@@ -100,9 +105,9 @@ export default function MobileAgendaView({
                           e.dataTransfer.setData('text/plain', slot.id);
                           e.dataTransfer.effectAllowed = 'move';
                         }}
-                        className={`agenda-session-card ${isSelected ? 'session-selected' : ''} ${isCompleted ? 'agenda-card-completed' : ''}`}
+                        className={`agenda-session-card ${isSelected ? 'session-selected' : ''} ${isCompleted ? 'agenda-card-completed' : ''} ${isCardActiveNow ? 'session-active-now' : ''}`}
                         style={{ 
-                          borderLeft: `5px solid ${isCompleted ? '#16a34a' : colors.border}`,
+                          borderLeft: `5px solid ${isCompleted ? '#16a34a' : isCardActiveNow ? '#2563eb' : colors.border}`,
                           backgroundColor: '#ffffff'
                         }}
                         onClick={() => onCourseClick({ ...slot, day: dayObj.label })}
@@ -130,6 +135,12 @@ export default function MobileAgendaView({
                             >
                               {slot.code}
                             </span>
+                            {isCardActiveNow && (
+                              <span className="agenda-live-now-badge print-hide">
+                                <span className="live-ping-dot-xs" />
+                                LIVE NOW
+                              </span>
+                            )}
                             {isCompleted && <span className="agenda-done-tag">✓ Done</span>}
                           </div>
                           <span className="session-time">
