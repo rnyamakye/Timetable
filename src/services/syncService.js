@@ -63,33 +63,61 @@ export async function fetchServerHealth() {
 }
 
 /**
- * Establish a live Server-Sent Events (SSE) connection for instant real-time sync across devices
+ * Establish live synchronization across devices:
+ * 1. Fast background polling & instant window-focus revalidation (works natively on Vercel)
+ * 2. Real-time SSE stream when available
  */
 export function initLiveSyncStream({ onUpdate, onStatusChange }) {
   let eventSource = null;
   let isIntentionallyClosed = false;
   let retryTimeout = null;
+  let pollInterval = null;
 
-  function connect() {
+  // Background fetch helper
+  async function checkForUpdates() {
+    if (isIntentionallyClosed) return;
+    try {
+      const data = await fetchTimetableFromServer();
+      if (data) {
+        onUpdate?.(data);
+        onStatusChange?.('connected');
+      }
+    } catch {
+      // Ignore background poll errors
+    }
+  }
+
+  // 1. Immediate revalidation whenever the user returns to the tab or unlocks phone
+  const handleVisibilityOrFocus = () => {
+    if (document.visibilityState === 'visible' || document.hasFocus()) {
+      checkForUpdates();
+    }
+  };
+
+  window.addEventListener('focus', handleVisibilityOrFocus);
+  document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+  // 2. Periodic background poll every 12 seconds (ideal for Vercel serverless)
+  pollInterval = setInterval(checkForUpdates, 12000);
+
+  // 3. Attempt SSE stream (works on local server and environments with persistent HTTP streaming)
+  function connectSSE() {
     if (isIntentionallyClosed) return;
 
     try {
-      onStatusChange?.('connecting');
       eventSource = new EventSource('/api/timetable/stream');
 
       eventSource.onopen = () => {
         onStatusChange?.('connected');
       };
 
-      eventSource.addEventListener('connected', (e) => {
+      eventSource.addEventListener('connected', () => {
         onStatusChange?.('connected');
       });
 
-      // Listen for instant updates pushed from other devices
       eventSource.addEventListener('timetable_update', (e) => {
         try {
           const payload = JSON.parse(e.data);
-          // Only process updates originating from other devices / clients
           if (payload.originClientId !== CLIENT_ID) {
             onUpdate?.(payload);
           }
@@ -99,27 +127,28 @@ export function initLiveSyncStream({ onUpdate, onStatusChange }) {
       });
 
       eventSource.onerror = () => {
-        onStatusChange?.('offline');
         if (eventSource) {
           eventSource.close();
           eventSource = null;
         }
-        // Auto-retry connection after 4 seconds
+        // If SSE closes (e.g. on Vercel serverless), fallback polling continues smoothly
         if (!isIntentionallyClosed) {
-          retryTimeout = setTimeout(connect, 4000);
+          retryTimeout = setTimeout(connectSSE, 10000);
         }
       };
-    } catch (err) {
-      onStatusChange?.('offline');
-      retryTimeout = setTimeout(connect, 4000);
+    } catch {
+      // Fallback polling is active
     }
   }
 
-  connect();
+  connectSSE();
 
   return () => {
     isIntentionallyClosed = true;
     if (retryTimeout) clearTimeout(retryTimeout);
+    if (pollInterval) clearInterval(pollInterval);
+    window.removeEventListener('focus', handleVisibilityOrFocus);
+    document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     if (eventSource) {
       eventSource.close();
       eventSource = null;
