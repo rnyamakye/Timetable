@@ -9,7 +9,9 @@ import {
   PlusCircle,
   Moon,
   Sparkles,
-  Layers
+  Layers,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { exportTimetableToICS } from '../utils/icsExport';
 
@@ -26,7 +28,9 @@ export default function Header({
   setSchedulePreset,
   onOpenAddModal,
   syncStatus = 'connected',
-  onOpenSyncModal
+  onOpenSyncModal,
+  soundEnabled = true,
+  onToggleSound
 }) {
   return (
     <header className="timetable-header">
@@ -52,6 +56,17 @@ export default function Header({
             <span className="sync-btn-label">
               {syncStatus === 'connected' ? 'Live Synced' : syncStatus === 'connecting' ? 'Syncing...' : 'Offline'}
             </span>
+          </button>
+
+          {/* Sound Audio Feedback Toggle Button */}
+          <button 
+            type="button"
+            className={`action-btn sound-pill-btn print-hide ${soundEnabled ? 'sound-on' : 'sound-muted'}`}
+            onClick={onToggleSound}
+            title={soundEnabled ? 'Completion chime enabled. Click to mute sound effects' : 'Sound effects are muted. Click to enable completion chime'}
+          >
+            {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            <span className="sound-btn-label">{soundEnabled ? 'Sound On' : 'Muted'}</span>
           </button>
 
           <button 

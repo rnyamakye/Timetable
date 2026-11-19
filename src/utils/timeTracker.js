@@ -130,3 +130,4 @@ export function getActiveAndNextSession(classes, scheduleTime) {
     minutesRemaining
   };
 }
+

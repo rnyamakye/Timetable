@@ -13,6 +13,13 @@ import CurrentActivityBanner from './components/CurrentActivityBanner';
 import { INITIAL_CLASSES, ALL_PERIODS } from './data/timetableData';
 import { getCurrentScheduleTime, getActiveAndNextSession } from './utils/timeTracker';
 import { 
+  playCompletionSound, 
+  playUnmarkSound, 
+  isSoundEnabled, 
+  setSoundEnabled, 
+  playPreviewSound 
+} from './utils/soundEffects';
+import { 
   fetchTimetableFromServer, 
   pushTimetableToServer, 
   resetTimetableOnServer, 
@@ -41,6 +48,20 @@ export default function App() {
 
   // Real-time Schedule Clock (auto-refreshes every 30s)
   const [scheduleTime, setScheduleTime] = useState(() => getCurrentScheduleTime());
+
+  // Sound feedback preferences (default: true)
+  const [soundEnabled, setSoundEnabledState] = useState(() => isSoundEnabled());
+
+  const handleToggleSound = () => {
+    setSoundEnabledState(prev => {
+      const next = !prev;
+      setSoundEnabled(next);
+      if (next) {
+        playPreviewSound();
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -326,6 +347,13 @@ export default function App() {
   };
 
   const handleToggleComplete = (sessionId) => {
+    const isCurrentlyDone = completedIds.includes(sessionId);
+    if (!isCurrentlyDone) {
+      playCompletionSound();
+    } else {
+      playUnmarkSound();
+    }
+
     let nextCompletedIds;
     setCompletedIds(prev => {
       const isRemoving = prev.includes(sessionId);
@@ -360,6 +388,14 @@ export default function App() {
   };
 
   const handleToggleDayHabit = (dateKey, sessionId) => {
+    const dayList = habitHistory[dateKey] || [];
+    const isCurrentlyDone = dayList.includes(sessionId);
+    if (!isCurrentlyDone) {
+      playCompletionSound();
+    } else {
+      playUnmarkSound();
+    }
+
     let nextCompletedIds;
     // If toggling for today, also keep current weekly completedIds in sync
     if (dateKey === '2026-11-11') {
@@ -442,6 +478,8 @@ export default function App() {
         syncStatus={syncStatus}
         connectedDevices={connectedDevices}
         onOpenSyncModal={() => setIsSyncModalOpen(true)}
+        soundEnabled={soundEnabled}
+        onToggleSound={handleToggleSound}
         onOpenAddModal={() => {
           setAddModalInitialDay('Monday');
           setAddModalInitialPeriod(11);
